@@ -8,6 +8,10 @@
     <link href="css/bootstrap.min.css" rel="stylesheet">
     <link href="css/styles.css" rel="stylesheet">
 
+    <script src="js/jquery-1.11.0.min.js"></script>
+    <script src="js/bootstrap.js"></script>
+    <script src="js/rss-parser.min.js"></script>
+
 </head>
 
 <body>
@@ -20,23 +24,44 @@
             <div class="row add-rss">
                 <div class="col-md-12 ">
                     <div class="input-group">
-                        <input type="text" id="rssLink" class="form-control input-sm" placeholder="Add new RSS" />
-                        <span class="input-group-btn">
-                            <button class="btn btn-success addRssBtn btn-sm"><i class="glyphicon glyphicon-plus"></i></button>
-                        </span>
+                        <!-- <input type="text" id="rssLink" class="form-control input-sm" placeholder="Add new RSS" /> -->
+                        <!-- <span class="input-group-btn"> -->
+                            <!-- <button class="btn btn-success addRssBtn btn-sm"><i class="glyphicon glyphicon-plus"></i></button> -->
+                        <!-- </span> -->
                     </div>
                 </div>
             </div>
-
+            
+            <!-- 左侧栏 -->
             <div class="row">
                 <div class="col-md-12">
-                    <ul class="site-lists ">
-                        {% for feed in feeds %}
-                            <li><a href="#" class="delete" id="id_{{ feed._id }}" title="Delete!"><span class="glyphicon glyphicon-remove"></span></a><a href="{{ feed.url }}" class="rss-link" title="{{feed.title}}">{{feed.title}}</a></li>
-                        {% endfor %}
+                    <ul class="site-lists">
+                        <!-- {% for feed in feeds %} -->
+                            <!-- <li><a href="#" class="delete" id="id_{{ feed._id }}" title="Delete!"><span class="glyphicon glyphicon-remove"></span></a><a href="{{ feed.url }}" class="rss-link" title="{{feed.title}}">{{feed.title}}</a></li> -->
+                        <!-- {% endfor %} -->
                     </ul>
                 </div>
             </div>
+
+            <script type="text/javascript">
+
+                // 更新rsslink栏
+                $.getJSON("data/rssdb.json", function (data){
+                    // console.log(data);
+                    let all_feeds = data['rss_link'];
+                    console.log(all_feeds);
+
+                    let template_str = (feed_id,feed_url,feed_title) => 
+                    '<li><span class="glyphicon glyphicon-book"></span></a><a href="' + String(feed_url) + '" class="rss-link" title="' + String(feed_title) + '">' + String(feed_title) + '</a></li>';
+
+                    let html_str = "";
+                    all_feeds.forEach((each_feed,idx) => {html_str += template_str(idx, data['rss_domain'] + each_feed['link'], each_feed['name']);})
+
+                    // console.log($(".site-lists"));
+                    $(".site-lists").html(html_str);
+                })
+            </script>
+
         </div>
 
         <!-- Page Content -->
@@ -69,12 +94,12 @@
 
  <div class="loading">Loading...</div>    
 
-    <script src="js/jquery-1.11.0.min.js"></script>
-    <script src="js/bootstrap.js"></script>
 
     <script>
- 
- $(function(){
+
+
+        // 侧边栏隐藏or显示控制
+        $(function(){
             $("a#menu-toggle").click(function(e) {
                 e.preventDefault();
             
@@ -83,47 +108,79 @@
             });
             
             
-         $('.addRssBtn').click(function(){
-            url = $('#rssLink').val();
-            $('.loading').show();
-            $.post('/add',{url:url },function(data){
-                if(data.response == 'ok'){
-                    console.log(data)
-                    $('ul.site-lists ').append('<li><a href="#" class="delete" id="id_'+data.id+'" title="Delete!"><span class="glyphicon glyphicon-remove"></span></a><a href="'+url+'" class="rss-link" title="'+data.title+'">'+data.title+'</a></li>');
-                }else{
-                    alert(data.response);
-                }
-                $('.loading').hide();
-            },'json');
-        });
+        //  $('.addRssBtn').click(function(){
+        //     url = $('#rssLink').val();
+        //     $('.loading').show();
+        //     $.post('/add',{url:url },function(data){
+        //         if(data.response == 'ok'){
+        //             console.log(data)
+        //             $('ul.site-lists ').append('<li><a href="#" class="delete" id="id_'+data.id+'" title="Delete!"><span class="glyphicon glyphicon-remove"></span></a><a href="'+url+'" class="rss-link" title="'+data.title+'">'+data.title+'</a></li>');
+        //         }else{
+        //             alert(data.response);
+        //         }
+        //         $('.loading').hide();
+        //     },'json');
+        // });
+        let parser = new RSSParser();
+        const CORS_PROXY = "https://cors-anywhere.herokuapp.com/";
         
+
         $(document).on('click','a.rss-link',function(e){
             e.preventDefault();
             $('.loading').show();
-            url = $(this).attr('href');
+            let url = $(this).attr('href');
             $('h2.posts-header').html($(this).attr('title'));
-            $.post('/fetch',{url:url},function(data){
-                if(data.response == 'ok'){
-                    $('.posts').html(data.result);
-                    $('.loading').hide();
-                }
-            },'json')
-        });        
-        
-         $(document).on('click','a.delete',function(e){
-            e.preventDefault();
-            $('.loading').show();
-            if(confirm('Are you sure ?')){
-                id = $(this).attr('id').replace('id_','');
-                $this = $(this);
-                $.post('/delete',{id:id},function(data){
-                     if(data.response == 'ok'){
-                        $($this).parent().hide('slow');
-                        $('.loading').hide();
-                    }
-                },'json');
-            }
-        }) ;
+
+            // console.log(url);
+
+            let templateStr4post = (link, title, summary) => '<div class="post"><h3 class="post-title"><a href="' + String(link) + '">' + String(title) +'</a></h3><div class="post-body">' + String(summary) + '</div></div>';
+
+            parser.parseURL(CORS_PROXY + url, function(err, feed) {
+                // console.log(url);
+                if (err) throw err;
+                // console.log(feed.title);
+                let postHtml = "";
+                feed.items.forEach(function(entry) {
+                    // 示例输出：https://github.com/rbren/rss-parser/blob/master/test/output/reddit.json
+                    postHtml += templateStr4post(entry.link, entry.title, entry.content)
+                    // console.log(entry.title + ':' + entry.link);
+                })
+                $('.posts').html(postHtml);
+                $('.loading').hide();
+            })
+
+            //python原来的代码：
+            // for post in feed.entries:
+            //     body += u'<div class="post">'
+            //     body += u'<h3 class="post-title"><a href="{}">{}</a></h3>'.format(post.link,post.title)        
+            //     body += u'<div class="post-body">{}</div>'.format(post.summary)
+            //     body += u'</div>'
+
+            // js原来的代码
+            // $.post('/fetch',{url:url},function(data){
+            //     if(data.response == 'ok'){
+            //         $('.posts').html(data.result);
+            //         $('.loading').hide();
+            //     }
+            // },'json')
+
+
+        });
+
+        //  $(document).on('click','a.delete',function(e){
+        //     e.preventDefault();
+        //     $('.loading').show();
+        //     if(confirm('Are you sure ?')){
+        //         id = $(this).attr('id').replace('id_','');
+        //         $this = $(this);
+        //         $.post('/delete',{id:id},function(data){
+        //              if(data.response == 'ok'){
+        //                 $($this).parent().hide('slow');
+        //                 $('.loading').hide();
+        //             }
+        //         },'json');
+        //     }
+        // }) ;
  });
  
 

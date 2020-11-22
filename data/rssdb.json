@@ -1,0 +1,19 @@
+{
+	"rss_domain":"https://myrsshub-git-master.zkcpku.vercel.app",
+	"rss_link":
+	[
+		{
+			"name":"央视新闻科技",
+			"link":"/cctv/tech"
+		},
+		{
+			"name":"北京大学微博",
+			"link":"/weibo/user/3237705130"
+
+		},
+		{
+			"name":"AI研习社",
+			"link":"/aiyanxishe/all"
+		}
+	]
+}
